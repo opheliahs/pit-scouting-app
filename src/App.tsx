@@ -267,13 +267,99 @@ const [
     setScreen('events')
   }
 
-  function selectEvent(
+  async function selectEvent(
     event: EventOption,
   ) {
     setSelectedEvent(event)
     setSelectedTeam(null)
-    setTeams(mockTeams)
-    setScreen('teams')
+    setClaimError(null)
+
+    try {
+      const response =
+        await fetch(
+          `https://botbusters-scouting-backend.onrender.com/api/lead/events/${event.key}/teams`,
+        )
+
+      if (!response.ok) {
+        throw new Error(
+          `Team directory returned ${response.status}.`,
+        )
+      }
+
+      const data =
+        await response.json() as {
+          teams?: Array<{
+            team_number?: number
+            teamNumber?: number
+            nickname?: string | null
+            name?: string | null
+          }>
+        }
+
+      const loadedTeams: TeamOption[] =
+        (data.teams ?? [])
+          .map((team) => ({
+            teamNumber:
+              team.team_number ??
+              team.teamNumber ??
+              0,
+
+            nickname:
+              team.nickname ??
+              team.name ??
+              '',
+
+            status:
+              'not-started' as const,
+          }))
+          .filter(
+            (team) =>
+              Number.isFinite(
+                team.teamNumber,
+              ) &&
+              team.teamNumber > 0,
+          )
+          .sort(
+            (a, b) =>
+              a.teamNumber -
+              b.teamNumber,
+          )
+
+      if (loadedTeams.length === 0) {
+        throw new Error(
+          'No teams were returned for this event.',
+        )
+      }
+
+      /*
+        Keep mockTeams as the base roster because
+        the existing Firebase listener overlays its
+        live statuses onto this array.
+      */
+      mockTeams.splice(
+        0,
+        mockTeams.length,
+        ...loadedTeams,
+      )
+
+      setTeams([
+        ...loadedTeams,
+      ])
+
+      setScreen('teams')
+    } catch (error) {
+      console.error(
+        'Could not load event teams:',
+        error,
+      )
+
+      setClaimError(
+        'Could not load the team list. Check your connection and try again.',
+      )
+
+      setTeams([])
+      setScreen('teams')
+    }
   }
 
   async function selectTeam(

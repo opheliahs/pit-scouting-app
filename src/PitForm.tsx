@@ -302,6 +302,63 @@ function PitForm({
     }
 
     try {
+      /*
+        Save the final report to the Botbusters backend first.
+
+        Firebase still handles live claiming, status,
+        and draft autosave. The backend stores the
+        completed pit report in PostgreSQL for Lead Scout.
+      */
+
+      const backendResponse =
+        await fetch(
+          'https://botbusters-scouting-backend.onrender.com/api/scouting/pit',
+          {
+            method: 'POST',
+
+            headers: {
+              'Content-Type':
+                'application/json',
+            },
+
+            body: JSON.stringify({
+              ...formData,
+              collectorName,
+              collectorId,
+            }),
+          },
+        )
+
+      if (!backendResponse.ok) {
+        let backendMessage =
+          `Backend returned ${backendResponse.status}.`
+
+        try {
+          const backendBody =
+            await backendResponse.json() as {
+              error?: string
+            }
+
+          if (backendBody.error) {
+            backendMessage =
+              backendBody.error
+          }
+        } catch {
+          // Keep the HTTP status message.
+        }
+
+        throw new Error(
+          backendMessage,
+        )
+      }
+
+      /*
+        PostgreSQL has the final report.
+
+        Now mark the Firebase document complete so
+        every Pit Scout sees this team as finished.
+      */
+
       await setDoc(
         documentReference,
         firestoreSubmission,
