@@ -853,6 +853,7 @@ const [
         selectedTeam &&
         savedProfile && (
           <PitForm
+            key={`${selectedEvent.key}_${selectedTeam.teamNumber}`}
             eventKey={
               selectedEvent.key
             }
