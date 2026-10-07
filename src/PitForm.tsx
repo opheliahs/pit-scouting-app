@@ -59,7 +59,21 @@ function PitForm({
 
       if (stored) {
         try {
-          return JSON.parse(stored) as PitScoutData
+          const storedData = JSON.parse(stored) as Partial<PitScoutData>
+
+          return {
+            ...createEmptyPitScoutData(
+              eventKey,
+              teamNumber,
+              collectorName,
+              collectorId,
+            ),
+            ...storedData,
+            eventKey,
+            teamNumber,
+            collectorName,
+            collectorId,
+          }
         } catch {
           // Ignore malformed local data.
         }
